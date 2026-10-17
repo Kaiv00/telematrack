@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+.vs/
+*.user
+
+# Terraform: local state and provider cache (keep .terraform.lock.hcl!)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Secrets and local config
+local.settings.json
+.env
