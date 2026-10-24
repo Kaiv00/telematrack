@@ -9,14 +9,20 @@ public class FaultDetector
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly ILogger<FaultDetector> _logger;
+    private readonly IReadingRepository _repository;
 
-    public FaultDetector(ILogger<FaultDetector> logger) => _logger = logger;
+    public FaultDetector(ILogger<FaultDetector> logger, IReadingRepository repository)
+    {
+        _logger = logger;
+        _repository = repository;
+    }
 
     [Function("FaultDetector")]
-    public void Run(
+    public async Task Run(
         [EventHubTrigger("%IoTHubEventPath%",
             Connection = "IoTHubConnection",
-            ConsumerGroup = "%ConsumerGroup%")] EventData[] events)
+            ConsumerGroup = "%ConsumerGroup%")] EventData[] events,
+        CancellationToken cancellationToken)
     {
         foreach (var e in events)
         {
@@ -31,6 +37,9 @@ public class FaultDetector
                 _logger.LogWarning(
                     "ALERT {Severity} on {VehicleId}: code={FaultCode}, oilTemp={Oil}",
                     severity, payload.VehicleId, payload.FaultCode, payload.OilTempCelsius);
+
+            await _repository.SaveAsync(
+                ReadingDocument.From(payload, severity), cancellationToken);
         }
     }
 }

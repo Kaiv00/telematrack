@@ -50,5 +50,7 @@ resource "azurerm_linux_function_app" "main" {
     IoTHubConnection = local.iothub_events_connection
     IoTHubEventPath  = azurerm_iothub.main.event_hub_events_path
     ConsumerGroup    = azurerm_iothub_consumer_group.functions.name
+    CosmosEndpoint   = azurerm_cosmosdb_account.main.endpoint
+    CosmosKey        = azurerm_cosmosdb_account.main.primary_key
   }
 }
