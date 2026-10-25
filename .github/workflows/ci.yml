@@ -10,9 +10,9 @@ jobs:
     name: Build and test (.NET)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
@@ -29,7 +29,7 @@ jobs:
       run:
         working-directory: infra
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: hashicorp/setup-terraform@v3
 
@@ -46,10 +46,10 @@ jobs:
     name: IaC security scan (Trivy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Scan Terraform
-        # Report-only for now (exit-code 0). We'll flip it to 1 after triaging findings.
+
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE/infra:/src" aquasec/trivy:0.76.1 \
-            config --severity HIGH,CRITICAL --exit-code 0 /src
+            config --severity HIGH,CRITICAL --exit-code 1 /src

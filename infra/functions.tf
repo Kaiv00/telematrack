@@ -15,6 +15,9 @@ locals {
   iothub_events_connection = "Endpoint=${azurerm_iothub.main.event_hub_events_endpoint};SharedAccessKeyName=${local.service_policy.key_name};SharedAccessKey=${local.service_policy.primary_key};EntityPath=${azurerm_iothub.main.event_hub_events_path}"
 }
 
+# Accepted risk: the Consumption plan (Y1) can't run with a network-restricted
+# storage account (Microsoft docs). Will revisit when moving to Flex Consumption or Premium.
+#trivy:ignore:AZU-0012:exp:2027-01-31
 resource "azurerm_storage_account" "func" {
   name                     = "stfn${var.project_name}${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.main.name
@@ -38,6 +41,7 @@ resource "azurerm_linux_function_app" "main" {
   service_plan_id            = azurerm_service_plan.func.id
   storage_account_name       = azurerm_storage_account.func.name
   storage_account_access_key = azurerm_storage_account.func.primary_access_key
+
 
   site_config {
     application_stack {
