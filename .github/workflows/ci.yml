@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  dotnet:
+    name: Build and test (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build simulator
+        run: dotnet build simulator --configuration Release
+
+      - name: Test (also builds the Function project)
+        run: dotnet test tests --configuration Release
+
+  terraform:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Format check
+        run: terraform fmt -check -recursive
+
+      - name: Init (no backend)
+        run: terraform init -backend=false -input=false
+
+      - name: Validate
+        run: terraform validate
+
+  security:
+    name: IaC security scan (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan Terraform
+        # Report-only for now (exit-code 0). We'll flip it to 1 after triaging findings.
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE/infra:/src" aquasec/trivy:0.76.1 \
+            config --severity HIGH,CRITICAL --exit-code 0 /src
