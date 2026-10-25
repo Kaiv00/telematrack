@@ -10,7 +10,7 @@ jobs:
     name: Build and test (.NET)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -29,7 +29,7 @@ jobs:
       run:
         working-directory: infra
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: hashicorp/setup-terraform@v3
 
@@ -46,7 +46,7 @@ jobs:
     name: IaC security scan (Trivy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Scan Terraform
 
