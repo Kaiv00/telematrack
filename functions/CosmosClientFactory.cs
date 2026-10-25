@@ -9,10 +9,10 @@ public static class CosmosClientFactory
         var options = new CosmosClientOptions
         {
             // Write C# "VehicleId" as JSON "vehicleId", matching the /vehicleId partition key
-            /*SerializerOptions = new CosmosSerializationOptions
+            SerializerOptions = new CosmosSerializationOptions
             {
                 PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-            }*/
+            }
         };
 
         // The local emulator needs Gateway mode; real Azure keeps the faster default
