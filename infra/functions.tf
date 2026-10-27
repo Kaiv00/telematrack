@@ -56,5 +56,6 @@ resource "azurerm_linux_function_app" "main" {
     ConsumerGroup    = azurerm_iothub_consumer_group.functions.name
     CosmosEndpoint   = azurerm_cosmosdb_account.main.endpoint
     CosmosKey        = azurerm_cosmosdb_account.main.primary_key
+    APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.main.connection_string
   }
 }

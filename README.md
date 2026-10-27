@@ -1,8 +1,10 @@
 # Telematrack
 
+[![CI](https://github.com/Kaiv00/telematrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaiv00/telematrack/actions/workflows/ci.yml)
+
 **Automotive telemetry & predictive maintenance platform.** A cloud pipeline that ingests simulated vehicle data, detects faults and stores every reading. Built with .NET, Azure and Terraform.
 
-> **Status: work in progress.** The simulator, the fault detection and the Cosmos DB storage layer run and are tested locally (the storage layer against the Cosmos DB emulator). The Azure infrastructure is written and passes `terraform validate`, but it has **not been deployed** (no Azure subscription yet), so the full hub → Function → database path has not been run end to end. The [Status](#status) table says exactly what is and isn't verified.
+> **Status: work in progress.** The simulator, the fault detection and the Cosmos DB storage layer run and are tested locally (the storage layer against the Cosmos DB emulator). The Azure infrastructure is written, passes `terraform validate` and an IaC security scan in CI, but it has **not been deployed** (no Azure subscription yet), so the full hub → Function → database path has not been run end to end. The [Status](#status) table says exactly what is and isn't verified.
 
 ## Architecture
 
@@ -23,6 +25,7 @@ flowchart LR
 | `functions/` | Azure Function (.NET 8, isolated worker): fault evaluation and the Cosmos DB repository |
 | `tests/` | xUnit unit tests, plus integration tests that run against the Cosmos DB emulator |
 | `infra/` | Terraform: resource group, IoT Hub, consumer group, Function App, Cosmos DB |
+| `.github/workflows/` | CI pipeline |
 
 ## Status
 
@@ -33,9 +36,10 @@ flowchart LR
 | `FaultEvaluator` and unit tests | Working |
 | Cosmos DB repository (`ReadingRepository`) | Working; **verified against the local Cosmos DB emulator** by integration tests |
 | Azure Function (`FaultDetector`) | Builds; **never run end to end** (hub trigger → repository) |
-| Terraform (IoT Hub, Function App, Cosmos DB) | Passes `terraform validate`; never applied |
+| Terraform (IoT Hub, Function App, Cosmos DB) | Passes `terraform validate` and the Trivy scan; never applied |
+| CI (build, tests, `terraform fmt`/`validate`, Trivy IaC scan) | Working on every push; **deployment is not automated** |
 | Alerting | Planned |
-| CI/CD (fmt, validate, tfsec, tests, deploy) | Planned |
+| Automated deployment | Planned |
 
 ## How it works
 
@@ -76,6 +80,13 @@ flowchart LR
 - **Logic is separate from plumbing.** `FaultEvaluator` has no Azure dependencies and is unit-tested offline; storage sits behind an interface.
 - **Secrets stay out of the repo.** Device connection strings come from environment variables, and Terraform state, the provider cache and `local.settings.json` are git-ignored.
 - **Free-tier budget.** The simulator defaults to one round every 60 seconds: 3 cars × 1,440 minutes = 4,320 messages/day, under the IoT Hub free tier's 8,000/day cap.
+
+## Security notes
+
+- **IaC scanning in CI.** Every push scans `infra/` with [Trivy](https://trivy.dev), the successor to tfsec, pinned to a specific version. HIGH and CRITICAL findings fail the build. The gate was verified to fail by temporarily removing a fix and watching the job go red.
+- **Fixed from the first scan:** the Function App now enforces HTTPS only.
+- **Accepted risk: network rules on the Function's storage account (`AZU-0012`).** The Function runs on the Consumption plan, which, per Microsoft's documentation, can't use a network-restricted storage account. The check is suppressed inline in `infra/functions.tf` with a written reason and an expiry date, so it resurfaces for review. A real fix means moving to a plan that supports secured storage (for example Flex Consumption or Premium).
+- **A clean scan is not proof of security.** It catches known misconfigurations only; see the limitations below for gaps it cannot see.
 
 ## Configuration
 
@@ -125,11 +136,21 @@ dotnet run --project simulator
 
 If only some of the variables are set, the simulator refuses to start rather than half-running.
 
+## Security notes
+
+- **IaC scanning.** Every push runs Trivy (the successor to tfsec) over `infra/` and fails the build on any HIGH or CRITICAL finding. The Trivy version is pinned.
+- **Fixed.** HTTPS is enforced on the Function App (`AZU-0004`).
+- **Accepted risk (`AZU-0012`).** The Function's storage account has no network restrictions. Azure Functions on the Consumption plan can't use a network-restricted storage account (per Microsoft's docs), so the scanner's recommended fix would break the app. The exception is documented in the Terraform and has an expiry date so it gets revisited. The real fix is a plan that supports secured storage, such as Flex Consumption.
+- **Not covered by the scanner.** The Cosmos account key is passed as an app setting (planned: managed identity). Network exposure of the Cosmos account and IoT Hub has not been reviewed.
+- **Supply chain.** Provider versions are locked in `.terraform.lock.hcl`, and Dependabot proposes GitHub Actions updates weekly. Actions are pinned to major version tags, not commit SHAs.
+- **Secrets.** None are stored in the repo. Device connection strings come from environment variables, and Terraform state and `local.settings.json` are git-ignored.
+
 ## Known limitations
 
-- Nothing has been deployed to Azure; the Terraform is validated, not applied.
+- Nothing has been deployed to Azure; the Terraform is validated and scanned, not applied.
 - The simulator's IoT Hub sender has not been tested against a live hub.
 - The Function's trigger-to-repository path has not been run end to end.
+- The Cosmos integration tests are skipped in CI because there is no emulator there; they run locally.
 - The Cosmos account key is passed as an app setting. Planned: managed identity, so no key exists.
 - A malformed message currently fails the whole batch. Planned: log and skip bad messages.
 - Request-unit figures from the emulator are not representative of the billed service.
@@ -138,8 +159,8 @@ If only some of the variables are set, the simulator refuses to start rather tha
 
 - [x] Simulator, fault evaluator and unit tests
 - [x] Cosmos DB storage (infrastructure and repository), verified against the local emulator
+- [x] GitHub Actions: build, tests, `terraform fmt`/`validate`, Trivy IaC scan
 - [ ] Alerting on critical faults
-- [ ] GitHub Actions: format check, `terraform validate`, `tfsec`, build and tests
 - [ ] Hardening: managed identity instead of keys, handling of malformed messages
 - [ ] Deploy the infrastructure and verify everything end to end
 
