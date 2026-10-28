@@ -145,7 +145,7 @@ If only some of the variables are set, the simulator refuses to start rather tha
 - **Supply chain.** Provider versions are locked in `.terraform.lock.hcl`, and Dependabot proposes GitHub Actions updates weekly. Actions are pinned to major version tags, not commit SHAs.
 - **Secrets.** None are stored in the repo. Device connection strings come from environment variables, and Terraform state and `local.settings.json` are git-ignored.
 
-## Known limitations
+## Not yet done
 
 - Nothing has been deployed to Azure; the Terraform is validated and scanned, not applied.
 - The simulator's IoT Hub sender has not been tested against a live hub.
