@@ -4,7 +4,7 @@
 
 **Automotive telemetry & predictive maintenance platform.** A cloud pipeline that ingests simulated vehicle data, detects faults and stores every reading. Built with .NET, Azure and Terraform.
 
-> **Status: work in progress.** The simulator, the fault detection and the Cosmos DB storage layer run and are tested locally (the storage layer against the Cosmos DB emulator). The Azure infrastructure is written, passes `terraform validate` and an IaC security scan in CI, but it has **not been deployed** (no Azure subscription yet), so the full hub → Function → database path has not been run end to end. The [Status](#status) table says exactly what is and isn't verified.
+> **What works today:** a simulated fleet → fault detection → idempotent Cosmos DB storage, covered by unit tests and emulator-backed integration tests, with CI (build, tests, Terraform checks, Trivy scan) on every push. Not yet done: it hasn’t been deployed to Azure because I don’t have a subscription, so the Terraform is validated and security-scanned, not applied.
 
 ## Architecture
 
