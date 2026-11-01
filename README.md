@@ -35,10 +35,10 @@ flowchart LR
 | Simulator to IoT Hub sender | Written and compiles; **not yet tested against a live hub** |
 | `FaultEvaluator` and unit tests | Working |
 | Cosmos DB repository (`ReadingRepository`) | Working; **verified against the local Cosmos DB emulator** by integration tests |
-| Azure Function (`FaultDetector`) | Builds; **never run end to end** (hub trigger → repository) |
+| Azure Function (`FaultDetector`) | Builds; its logic (parsing, severity, alert logging, storage calls) is tested with fakes; **never run against a real Event Hub trigger** |
 | Terraform (IoT Hub, Function App, Cosmos DB) | Passes `terraform validate` and the Trivy scan; never applied |
-| CI (build, tests, `terraform fmt`/`validate`, Trivy IaC scan) | Working on every push; **deployment is not automated** |
-| Alerting | Planned |
+| CI (build, tests, `terraform fmt`/`validate`, Trivy IaC scan) | Working on every push; the emulator-backed tests are skipped there; **deployment is not automated** |
+| Alerting (Application Insights, scheduled log query, email action group) | Written as Terraform and validated; **never deployed**; the log wording it depends on is covered by tests |
 | Automated deployment | Planned |
 
 ## How it works
@@ -46,8 +46,9 @@ flowchart LR
 1. The simulator generates readings (RPM, oil temperature, speed, optional fault code) for each vehicle and serializes them as compact camelCase JSON.
 2. In real mode, each vehicle connects to IoT Hub with its **own device identity** and sends the JSON over MQTT.
 3. The Function reads the hub's built-in Event Hub endpoint and passes each reading to `FaultEvaluator`.
-4. `FaultEvaluator` returns `None`, `Warning` or `Critical`; warnings and criticals are logged as alerts.
-5. Every reading, alert or not, is saved to Cosmos DB with its alert level.
+4. Messages that aren't valid telemetry (bad JSON, missing vehicle ID or timestamp) are skipped and logged as errors, so one bad message can't fail the whole batch.
+5. `FaultEvaluator` returns `None`, `Warning` or `Critical`. Warnings and criticals are logged with fixed wording, and every valid reading, alert or not, is saved to Cosmos DB with its alert level.
+6. A scheduled log query looks for the critical wording every 5 minutes and emails the owner through an Azure Monitor action group.
 
 ### Fault rules
 
@@ -80,6 +81,8 @@ flowchart LR
 - **Logic is separate from plumbing.** `FaultEvaluator` has no Azure dependencies and is unit-tested offline; storage sits behind an interface.
 - **Secrets stay out of the repo.** Device connection strings come from environment variables, and Terraform state, the provider cache and `local.settings.json` are git-ignored.
 - **Free-tier budget.** The simulator defaults to one round every 60 seconds: 3 cars × 1,440 minutes = 4,320 messages/day, under the IoT Hub free tier's 8,000/day cap.
+- **The alert wording is a tested contract.** The alert query in Terraform searches for fixed text. A test fails if the C# log text and the Terraform query drift apart, and the severity word is literal in the log template so the text is present however the log pipeline stores it.
+- **Bad input doesn't take the batch down.** Malformed messages are skipped and logged. Trade-off: skipped messages aren't retained; a production system would keep them in a dead-letter store.
 
 ## Security notes
 
@@ -149,20 +152,28 @@ If only some of the variables are set, the simulator refuses to start rather tha
 
 - Nothing has been deployed to Azure; the Terraform is validated and scanned, not applied.
 - The simulator's IoT Hub sender has not been tested against a live hub.
-- The Function's trigger-to-repository path has not been run end to end.
-- The Cosmos integration tests are skipped in CI because there is no emulator there; they run locally.
-- The Cosmos account key is passed as an app setting. Planned: managed identity, so no key exists.
-- A malformed message currently fails the whole batch. Planned: log and skip bad messages.
-- Request-unit figures from the emulator are not representative of the billed service.
+- The Function has never run against a real Event Hub trigger. Its logic is tested with fakes.
+- The Cosmos account key is passed as an app setting (planned: managed identity).
+- Skipped malformed messages are only logged, not stored (planned: dead-letter store).
+- The alert emails on every critical reading in the window; per-vehicle de-duplication is planned.
+- The emulator-backed integration tests don't run in CI (no emulator there).
+- Request-unit figures from the emulator aren't representative of the billed service.
 
 ## Roadmap
 
-- [x] Simulator, fault evaluator and unit tests
-- [x] Cosmos DB storage (infrastructure and repository), verified against the local emulator
+- [x] Simulator, fault evaluator and tests
+- [x] Cosmos DB storage, verified against the local emulator
 - [x] GitHub Actions: build, tests, `terraform fmt`/`validate`, Trivy IaC scan
-- [ ] Alerting on critical faults
-- [ ] Hardening: managed identity instead of keys, handling of malformed messages
+- [x] Alerting as code (written and validated, not deployed)
+- [ ] Hardening: managed identity instead of keys, dead-letter store
 - [ ] Deploy the infrastructure and verify everything end to end
+
+## First deployment checklist
+
+1. Deploy, then run `traces | where message has "ALERT"` in the Application Insights Logs blade to confirm the alert text arrives as the query expects.
+2. Register the three devices and send a critical reading; confirm the alert email arrives.
+3. Confirm readings land in Cosmos DB and that the 30-day TTL is active.
+4. Confirm `telemetryMode` is `OpenTelemetry` in `host.json` and the app has the Application Insights connection string.
 
 ## Author
 

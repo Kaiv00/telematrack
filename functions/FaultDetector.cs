@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Azure.Messaging.EventHubs;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
@@ -7,7 +6,6 @@ namespace TelematrackFunctions;
 
 public class FaultDetector
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly ILogger<FaultDetector> _logger;
     private readonly IReadingRepository _repository;
 
@@ -26,20 +24,26 @@ public class FaultDetector
     {
         foreach (var e in events)
         {
-            var payload = JsonSerializer.Deserialize<TelemetryPayload>(
-                e.EventBody.ToString(), JsonOptions);
+            if (!TelemetryParser.TryParse(e.EventBody.ToString(), out var payload))
+            {
+                // Log the position, not the body: a bad message could be huge or sensitive
+                _logger.LogError("Skipping malformed message (sequence number {Sequence})", e.SequenceNumber);
+                continue;
+            }
 
-            if (payload is null) continue;
+    var severity = FaultEvaluator.Evaluate(payload);
+    // ...the rest stays exactly as it is
 
-            var severity = FaultEvaluator.Evaluate(payload);
+           if (severity == Severity.Critical)
+            _logger.LogWarning(AlertMessages.CriticalTemplate,
+            payload.VehicleId, payload.FaultCode, payload.OilTempCelsius);
 
-            if (severity != Severity.None)
-                _logger.LogWarning(
-                    "ALERT {Severity} on {VehicleId}: code={FaultCode}, oilTemp={Oil}",
-                    severity, payload.VehicleId, payload.FaultCode, payload.OilTempCelsius);
+           else if (severity == Severity.Warning)
+            _logger.LogWarning(AlertMessages.WarningTemplate,
+            payload.VehicleId, payload.FaultCode, payload.OilTempCelsius);
 
             await _repository.SaveAsync(
-                ReadingDocument.From(payload, severity), cancellationToken);
+            ReadingDocument.From(payload, severity), cancellationToken);
         }
     }
 }
