@@ -10,11 +10,33 @@
 
 ```mermaid
 flowchart LR
-    SIM["Fleet simulator<br/>.NET console app"] -->|"MQTT, one identity per car"| HUB["Azure IoT Hub"]
-    HUB -->|"built-in Event Hub endpoint"| FN["Azure Function<br/>FaultDetector"]
-    FN --> EVAL["FaultEvaluator<br/>pure logic, unit-tested"]
-    FN --> DB[("Cosmos DB<br/>readings")]
-    FN -.->|planned| ALERT["Alerts"]
+    %% Setup global styling for dark theme
+    themeSpec[" "]
+    style themeSpec fill:none,stroke:none
+    classDef default fill:#151515,stroke:#777,stroke-width:1px,color:#eee,font-family:sans-serif,font-size:12px;
+    classDef edgeLabel background-color:#151515,color:#bbb,font-size:11px;
+
+    %% Nodes Definitions
+    SIM["Fleet simulator<br/>.NET console app"]
+    HUB["Azure IoT Hub"]
+    FN["Azure Function<br/>FaultDetector"]
+    EVAL["FaultEvaluator<br/>pure logic, unit-tested"]
+    DB[("Cosmos DB<br/>readings")]
+    APP["Application Insights"]
+    RULE["Alert rule"]
+    EMAIL["Email action group"]
+
+    %% Connections
+    SIM -->|MQTT, one identity per car| HUB
+    HUB -->|built-in Event Hub endpoint| FN
+    FN --> EVAL
+    FN --> DB
+    FN -->|logs| APP
+    APP -->|scheduled query, 5 min| RULE
+    RULE --> EMAIL
+
+    %% Apply Link Styling for clean text overlays
+    linkStyle 0,1,2,3,4,5,6 stroke:#777,stroke-width:1px,color:#aaa
 ```
 
 ## Repository layout
@@ -138,15 +160,6 @@ dotnet run --project simulator
 ```
 
 If only some of the variables are set, the simulator refuses to start rather than half-running.
-
-## Security notes
-
-- **IaC scanning.** Every push runs Trivy (the successor to tfsec) over `infra/` and fails the build on any HIGH or CRITICAL finding. The Trivy version is pinned.
-- **Fixed.** HTTPS is enforced on the Function App (`AZU-0004`).
-- **Accepted risk (`AZU-0012`).** The Function's storage account has no network restrictions. Azure Functions on the Consumption plan can't use a network-restricted storage account (per Microsoft's docs), so the scanner's recommended fix would break the app. The exception is documented in the Terraform and has an expiry date so it gets revisited. The real fix is a plan that supports secured storage, such as Flex Consumption.
-- **Not covered by the scanner.** The Cosmos account key is passed as an app setting (planned: managed identity). Network exposure of the Cosmos account and IoT Hub has not been reviewed.
-- **Supply chain.** Provider versions are locked in `.terraform.lock.hcl`, and Dependabot proposes GitHub Actions updates weekly. Actions are pinned to major version tags, not commit SHAs.
-- **Secrets.** None are stored in the repo. Device connection strings come from environment variables, and Terraform state and `local.settings.json` are git-ignored.
 
 ## Not yet done
 
