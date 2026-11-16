@@ -8,7 +8,7 @@ public static class CosmosClientFactory
     {
         var options = new CosmosClientOptions
         {
-            // Write C# "VehicleId" as JSON "vehicleId", matching the /vehicleId partition key
+            // This write C# "VehicleId" as JSON "vehicleId", matching the /vehicleId partition key
             SerializerOptions = new CosmosSerializationOptions
             {
                 PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase

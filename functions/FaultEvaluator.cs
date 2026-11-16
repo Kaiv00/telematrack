@@ -25,7 +25,7 @@ public static class FaultEvaluator
     {
         return KnownFaults.TryGetValue(payload.FaultCode, out var severity)
             ? severity
-            : Severity.Warning; // unknown code: fail safe, never ignore
+            : Severity.Warning; // unknown code: fail safe
     }
 
 

@@ -27,7 +27,7 @@ public class CosmosRepositoryIntegrationTests
     }
     catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
     {
-        // Nothing to clean up: the save never succeeded
+        // Nothing to clean up cause the save never succeeded
     }
 }
 

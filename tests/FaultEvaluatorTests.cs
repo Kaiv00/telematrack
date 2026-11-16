@@ -60,7 +60,6 @@ public class FaultEvaluatorTests
     [Fact]
     public void OilTempExactlyAtThreshold_ReturnsNone()
     {
-        // The rule is "> 115", so 115 itself must NOT alert.
         var result = FaultEvaluator.Evaluate(MakePayload(oilTemp: 115));
 
         Assert.Equal(Severity.None, result);
@@ -69,7 +68,7 @@ public class FaultEvaluatorTests
     [Fact]
     public void CriticalFault_WinsOverHighOilTemp()
     {
-        // Two problems at once: the worse one should be reported.
+        // Two problems at once: the worse one shall be reported
         var result = FaultEvaluator.Evaluate(
             MakePayload(faultCode: "P1A57", oilTemp: 130));
 
@@ -79,7 +78,7 @@ public class FaultEvaluatorTests
     [Fact]
 public void UnknownFaultCode_ReturnsWarning()
 {
-    // A code we've never heard of must never be silently ignored.
+    // A code never heard of must never be silently ignored.
     var result = FaultEvaluator.Evaluate(MakePayload(faultCode: "P9999"));
 
     Assert.Equal(Severity.Warning, result);
@@ -90,7 +89,6 @@ public void UnknownFaultCode_ReturnsWarning()
 [InlineData("   ")]
 public void BlankFaultCode_IsTreatedAsNoFault(string code)
 {
-    // An empty string is "no fault", not an unknown fault.
     var result = FaultEvaluator.Evaluate(MakePayload(faultCode: code));
 
     Assert.Equal(Severity.None, result);

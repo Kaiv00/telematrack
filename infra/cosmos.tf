@@ -30,5 +30,5 @@ resource "azurerm_cosmosdb_sql_container" "readings" {
   account_name        = azurerm_cosmosdb_account.main.name
   database_name       = azurerm_cosmosdb_sql_database.main.name
   partition_key_paths = ["/vehicleId"]
-  default_ttl         = 2592000 # 30 days, in seconds
+  default_ttl         = 2592000 # 30 days in seconds
 }

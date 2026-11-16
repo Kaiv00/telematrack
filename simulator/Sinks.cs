@@ -81,7 +81,7 @@ public static class SinkFactory
         throw new InvalidOperationException(
             "Missing connection strings for: " + string.Join(", ", missing.Select(EnvName)));
 
-    // Pass 2: everything is present, now build the clients
+    // Pass 2: everything is present, builds the clients
     var clients = new Dictionary<string, DeviceClient>();
     foreach (var id in vehicleIds)
     {

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FunctionsTests;
 
-// Like [Fact], but skips itself if the Cosmos emulator isn't reachable
+// skips itself if the Cosmos emulator isn't reachable
 public sealed class EmulatorFactAttribute : FactAttribute
 {
     public EmulatorFactAttribute()

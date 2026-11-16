@@ -10,7 +10,7 @@ var jsonOptions = new JsonSerializerOptions
     WriteIndented = false
 };
 
-// Default 60s keeps 3 cars under the free tier's 8,000 messages/day cap
+// Default 60s keeps 3 cars under the free tier's 8000 messages/day cap
 var intervalSeconds =
     int.TryParse(Environment.GetEnvironmentVariable("SIMULATOR_INTERVAL_SECONDS"), out var parsed) && parsed > 0
         ? parsed
@@ -52,7 +52,7 @@ try
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // One failed send must not kill the whole fleet
+                // So that a single send failure does not crash the entire fleet
                 Console.Error.WriteLine($"Send failed for {vehicleId}: {ex.Message}");
             }
         }
@@ -62,7 +62,7 @@ try
 }
 catch (OperationCanceledException)
 {
-    // Normal shutdown path
+    // Shutdown path
 }
 
 Console.WriteLine("Simulator stopped successfully.");

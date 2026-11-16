@@ -16,5 +16,5 @@ variable "environment" {
 variable "alert_email" {
   description = "Email address that receives critical fault alerts"
   type        = string
-  # No default on purpose: set it in a git-ignored terraform.tfvars file
+  # No default on purpose!
 }

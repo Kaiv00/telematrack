@@ -114,7 +114,7 @@ public class AlertWordingTests
     [Fact]
     public void AlertRuleInTerraform_SearchesForTheSameText()
     {
-        // Walk up from the test's folder until we find the repo root (it has an infra/ folder)
+        // Walk up from the test's folder(it has an infra/ folder)
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "infra")))
             dir = dir.Parent;

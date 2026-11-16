@@ -1,4 +1,4 @@
-# Dedicated consumer group so the Function doesn't share $Default with anything else
+# Dedicated consumer group so the Function doesn't share $Default with anything else ;)
 resource "azurerm_iothub_consumer_group" "functions" {
   name                   = "functions"
   iothub_name            = azurerm_iothub.main.name
@@ -7,7 +7,7 @@ resource "azurerm_iothub_consumer_group" "functions" {
 }
 
 locals {
-  # Least-privilege "service" policy, NOT iothubowner (last lesson)
+  # Least-privilege "service" policy
   service_policy = one([
     for p in azurerm_iothub.main.shared_access_policy : p if p.key_name == "service"
   ])
@@ -15,7 +15,7 @@ locals {
   iothub_events_connection = "Endpoint=${azurerm_iothub.main.event_hub_events_endpoint};SharedAccessKeyName=${local.service_policy.key_name};SharedAccessKey=${local.service_policy.primary_key};EntityPath=${azurerm_iothub.main.event_hub_events_path}"
 }
 
-# Accepted risk: the Consumption plan (Y1) can't run with a network-restricted
+# !Accepted risk!: the Consumption plan (Y1) can't run with a network-restricted
 # storage account (Microsoft docs). Will revisit when moving to Flex Consumption or Premium.
 #trivy:ignore:AZU-0012:exp:2027-01-31
 resource "azurerm_storage_account" "func" {

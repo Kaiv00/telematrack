@@ -32,7 +32,6 @@ public class FaultDetector
             }
 
     var severity = FaultEvaluator.Evaluate(payload);
-    // ...the rest stays exactly as it is
 
            if (severity == Severity.Critical)
             _logger.LogWarning(AlertMessages.CriticalTemplate,
